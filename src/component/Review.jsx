@@ -1,9 +1,7 @@
-// src/component/Review.js
 import React, { useState, useRef, useEffect } from 'react';
 import './Review.css';
 
 const Review = () => {
-  // useState hooks for component state
   const [reviews, setReviews] = useState([
     {
       id: 1,
@@ -30,22 +28,20 @@ const Review = () => {
   const [showForm, setShowForm] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formErrors, setFormErrors] = useState({});
+  const [sortBy, setSortBy] = useState('date'); // New: Sorting state
+  const [filterRating, setFilterRating] = useState(0); // New: Filter by rating
 
-  // useRef hooks for DOM references and persistent values
   const nameInputRef = useRef(null);
   const commentTextareaRef = useRef(null);
   const formContainerRef = useRef(null);
-  const reviewCountRef = useRef(2); // Keep track of initial review count
-  const submitButtonRef = useRef(null);
+  const reviewCountRef = useRef(2);
 
-  // Focus on name input when form opens
   useEffect(() => {
     if (showForm && nameInputRef.current) {
       nameInputRef.current.focus();
     }
   }, [showForm]);
 
-  // Scroll to form when it opens
   useEffect(() => {
     if (showForm && formContainerRef.current) {
       formContainerRef.current.scrollIntoView({ 
@@ -55,7 +51,6 @@ const Review = () => {
     }
   }, [showForm]);
 
-  // Star Rating Component with useRef
   const StarRating = ({ rating, interactive = false, onRatingChange }) => {
     const [hoveredRating, setHoveredRating] = useState(0);
     const starContainerRef = useRef(null);
@@ -63,7 +58,6 @@ const Review = () => {
     const handleClick = (value) => {
       if (interactive && onRatingChange) {
         onRatingChange(value);
-        // Clear any previous errors when rating is selected
         setFormErrors(prev => ({ ...prev, rating: '' }));
       }
     };
@@ -113,12 +107,10 @@ const Review = () => {
     );
   };
 
-  // Calculate average rating using useRef to avoid recalculation
   const averageRating = reviews.length > 0 
     ? (reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length).toFixed(1)
     : 0;
 
-  // Form validation function
   const validateForm = () => {
     const errors = {};
     
@@ -140,12 +132,10 @@ const Review = () => {
     return Object.keys(errors).length === 0;
   };
 
-  // Handle form submission with useRef and useState
   const handleSubmit = async (e) => {
     e.preventDefault();
     
     if (!validateForm()) {
-      // Focus on first field with error
       if (formErrors.name && nameInputRef.current) {
         nameInputRef.current.focus();
       } else if (formErrors.comment && commentTextareaRef.current) {
@@ -156,7 +146,6 @@ const Review = () => {
 
     setIsSubmitting(true);
     
-    // Simulate API call delay
     await new Promise(resolve => setTimeout(resolve, 1000));
     
     const review = {
@@ -168,13 +157,11 @@ const Review = () => {
     setReviews(prevReviews => [review, ...prevReviews]);
     reviewCountRef.current += 1;
     
-    // Reset form
     setNewReview({ name: '', rating: 0, comment: '' });
     setFormErrors({});
     setShowForm(false);
     setIsSubmitting(false);
     
-    // Clear form fields using refs
     if (nameInputRef.current) nameInputRef.current.value = '';
     if (commentTextareaRef.current) commentTextareaRef.current.value = '';
   };
@@ -186,7 +173,6 @@ const Review = () => {
       [name]: value
     }));
     
-    // Clear error when user starts typing
     if (formErrors[name]) {
       setFormErrors(prev => ({ ...prev, [name]: '' }));
     }
@@ -202,7 +188,6 @@ const Review = () => {
   const handleFormToggle = () => {
     setShowForm(prev => !prev);
     if (showForm) {
-      // Reset form when closing
       setNewReview({ name: '', rating: 0, comment: '' });
       setFormErrors({});
     }
@@ -214,25 +199,57 @@ const Review = () => {
     setFormErrors({});
   };
 
+  // New: Sorting and filtering logic
+  const sortedAndFilteredReviews = reviews
+    .filter(review => filterRating === 0 || review.rating === filterRating)
+    .sort((a, b) => {
+      if (sortBy === 'rating') {
+        return b.rating - a.rating || new Date(b.date) - new Date(a.date);
+      }
+      return new Date(b.date) - new Date(a.date);
+    });
+
   return (
     <div className="review-container">
       <div className="review-header">
         <h2>Customer Reviews</h2>
-        <div className="review-stats">
-          <div className="average-rating">
-            <StarRating rating={Math.round(averageRating)} />
-            <span className="rating-text">{averageRating} out of 5</span>
+        <div className="review-controls">
+          <div className="review-stats">
+            <div className="average-rating">
+              <StarRating rating={Math.round(averageRating)} />
+              <span className="rating-text">{averageRating} out of 5</span>
+            </div>
+            <div className="total-reviews">
+              ({reviews.length} {reviews.length === 1 ? 'review' : 'reviews'})
+            </div>
           </div>
-          <div className="total-reviews">
-            ({reviews.length} {reviews.length === 1 ? 'review' : 'reviews'})
+          <div className="review-filters">
+            <select 
+              value={sortBy} 
+              onChange={(e) => setSortBy(e.target.value)}
+              className="sort-select"
+            >
+              <option value="date">Sort by Date (Newest)</option>
+              <option value="rating">Sort by Rating (Highest)</option>
+            </select>
+            <select 
+              value={filterRating} 
+              onChange={(e) => setFilterRating(Number(e.target.value))}
+              className="filter-select"
+            >
+              <option value={0}>All Ratings</option>
+              {[1, 2, 3, 4, 5].map(rating => (
+                <option key={rating} value={rating}>{rating} Stars</option>
+              ))}
+            </select>
           </div>
+          <button 
+            className="add-review-btn"
+            onClick={handleFormToggle}
+          >
+            {showForm ? 'Cancel' : 'Write a Review'}
+          </button>
         </div>
-        <button 
-          className="add-review-btn"
-          onClick={handleFormToggle}
-        >
-          {showForm ? 'Cancel' : 'Write a Review'}
-        </button>
       </div>
 
       {showForm && (
@@ -295,7 +312,6 @@ const Review = () => {
 
             <div className="form-actions">
               <button 
-                ref={submitButtonRef}
                 type="submit" 
                 className="submit-btn"
                 disabled={isSubmitting}
@@ -316,13 +332,17 @@ const Review = () => {
       )}
 
       <div className="reviews-list">
-        {reviews.length === 0 ? (
+        {sortedAndFilteredReviews.length === 0 ? (
           <div className="no-reviews">
-            <p>No reviews yet. Be the first to review!</p>
+            <p>No reviews match the selected filters.</p>
           </div>
         ) : (
-          reviews.map((review) => (
-            <div key={review.id} className="review-card">
+          sortedAndFilteredReviews.map((review, index) => (
+            <div 
+              key={review.id} 
+              className="review-card"
+              style={{ animationDelay: `${index * 0.1}s` }}
+            >
               <div className="review-header-card">
                 <div className="reviewer-info">
                   <h4>{review.name}</h4>
